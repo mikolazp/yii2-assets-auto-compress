@@ -1,5 +1,5 @@
 {
-	"name": "skeeks/yii2-assets-auto-compress",
+	"name": "mikolazp/yii2-assets-auto-compress",
 	"description": "Automatically compile and merge files js + css",
 	"keywords": ["yii", "app", "skeeks", "sx", "framework", "js", "css", "assets", "auto assets"],
     "homepage": "http://www.skeeks.com/",

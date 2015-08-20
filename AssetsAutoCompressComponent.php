@@ -5,7 +5,7 @@
  * @copyright 2010 SkeekS (СкикС)
  * @date 05.08.2015
  */
-namespace skeeks\yii2\assetsAuto;
+namespace mikolazp\yii2\assetsAuto;
 
 use yii\helpers\FileHelper;
 use yii\base\BootstrapInterface;
