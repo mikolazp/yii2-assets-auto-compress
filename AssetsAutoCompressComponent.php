@@ -31,67 +31,76 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
     public $enabled = true;
 
 
-    /**
-     * @var bool
-     */
-    public $jsCompress = true;
-    /**
-     * @var bool Выризать комментарии при обработке js
-     */
-    public $jsCompressFlaggedComments = true;
 
-
-    /**
-     * @var bool
-     */
-    public $cssCompress = true;
-
+    /*########## CSS ##########*/
 
     /**
      * @var bool Включение объединения css файлов
      */
     public $cssFileCompile = true;
+    /**
+     * @var bool
+     */
+    public $cssCompress = true;
+    /**
+     * @var bool Включить сжатие и обработку css перед сохранением в файл
+     */
+    public $cssFileCompress = false;
+    /**
+     * @var bool Files, that don't need to compile
+     */
+    public $CssCompileIgnoreFiles = [];
+
 
     /**
      * @var bool Пытаться получить файлы css к которым указан путь как к удаленному файлу, скчать его к себе.
      */
     public $cssFileRemouteCompile = false;
-
-    /**
-     * @var bool Включить сжатие и обработку css перед сохранением в файл
-     */
-    public $cssFileCompress = false;
-
     /**
      * @var bool Перенос css файлов вниз страницы
      */
     public $cssFileBottom = false;
-
     /**
      * @var bool Перенос css файлов вниз страницы и их подгрузка при помощи js
      */
     public $cssFileBottomLoadOnJs = false;
 
 
+
+
+    /*########## JAVASCRIPT ##########*/
+
     /**
      * @var bool Включение объединения js файлов
      */
     public $jsFileCompile = true;
-
     /**
-     * @var bool Пытаться получить файлы js к которым указан путь как к удаленному файлу, скчать его к себе.
+     * @var bool compress js code that directly in page
      */
-    public $jsFileRemouteCompile = false;
-
+    public $jsCompress = true;
     /**
      * @var bool Включить сжатие и обработку js перед сохранением в файл
      */
     public $jsFileCompress = true;
+    /**
+     * @var bool Files, that don't need to compile
+     */
+    public $JsCompileIgnoreFiles = [];
+
 
     /**
      * @var bool Выризать комментарии при обработке js
      */
+    public $jsCompressFlaggedComments = true;
+    /**
+     * @var bool Пытаться получить файлы js к которым указан путь как к удаленному файлу, скчать его к себе.
+     */
+    public $jsFileRemouteCompile = false;
+    /**
+     * @var bool Выризать комментарии при обработке js
+     */
     public $jsFileCompressFlaggedComments = true;
+
 
 
     /**
@@ -269,7 +278,7 @@ JS
             $resultFiles = [];
 
             foreach ($files as $fileCode => $fileTag) {
-                if (!Url::isRelative($fileCode)) {
+                if (!Url::isRelative($fileCode) || $this->isIgnoreJs($fileCode)) {
                     $resultFiles[$fileCode] = $fileTag;
                 } else {
                     if ($this->jsFileRemouteCompile) {
@@ -286,7 +295,7 @@ JS
         $resultContent = [];
         $resultFiles = [];
         foreach ($files as $fileCode => $fileTag) {
-            if (Url::isRelative($fileCode)) {
+            if (Url::isRelative($fileCode) && $this->isIgnoreJs($fileCode)) {
                 $resultContent[] = trim(file_get_contents(Url::to(\Yii::getAlias('@web' . $fileCode), true)));
             } else {
                 if ($this->jsFileRemouteCompile) {
@@ -339,11 +348,12 @@ JS
         $rootDir = \Yii::getAlias('@webroot/assets/css-compress');
         $rootUrl = $rootDir . '/' . $fileName;
 
+
         if (file_exists($rootUrl)) {
             $resultFiles = [];
 
             foreach ($files as $fileCode => $fileTag) {
-                if (!Url::isRelative($fileCode)) {
+                if (!Url::isRelative($fileCode) || $this->isIgnoreCss($fileCode)) {
                     $resultFiles[$fileCode] = $fileTag;
                 } else {
                     if ($this->cssFileRemouteCompile) {
@@ -360,20 +370,22 @@ JS
         $resultContent = [];
         $resultFiles = [];
         foreach ($files as $fileCode => $fileTag) {
-            if (Url::isRelative($fileCode)) {
+            if (Url::isRelative($fileCode) && !$this->isIgnoreCss($fileCode)) {
                 $contentTmp = trim(file_get_contents(Url::to(\Yii::getAlias('@web' . $fileCode), true)));
 
                 $fileCodeTmp = explode("/", $fileCode);
                 unset($fileCodeTmp[count($fileCodeTmp) - 1]);
                 $prependRelativePath = implode("/", $fileCodeTmp) . "/";
 
-                $contentTmp = \Minify_CSS::minify($contentTmp, [
-                    "prependRelativePath" => $prependRelativePath,
+                if ($this->cssFileCompress) {
+                    $contentTmp = \Minify_CSS::minify($contentTmp, [
+                        "prependRelativePath" => $prependRelativePath,
 
-                    'compress'            => true,
-                    'removeCharsets'      => true,
-                    'preserveComments'    => true,
-                ]);
+                        'compress'            => true,
+                        'removeCharsets'      => true,
+                        'preserveComments'    => true,
+                    ]);
+                }
 
                 //$contentTmp = \CssMin::minify($contentTmp);
 
@@ -437,5 +449,45 @@ JS
         return [md5($css) => "<style>" . $css . "</style>"];
     }
 
+
+    /**
+     * @param $name
+     *
+     * @return bool
+     */
+    protected function isIgnoreCss($name){
+        if(empty($this->CssCompileIgnoreFiles)){
+            return false;
+        }
+
+
+        foreach ((array)$this->CssCompileIgnoreFiles as $file) {
+            if(strpos($name, $file) !== false){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param $name
+     *
+     * @return bool
+     */
+    protected function isIgnoreJs($name){
+        if(empty($this->JsCompileIgnoreFiles)){
+            return false;
+        }
+
+
+        foreach ((array)$this->JsCompileIgnoreFiles as $file) {
+            if(strpos($name, $file) !== false){
+                return true;
+            }
+        }
+
+        return false;
+    }
 
 }
