@@ -80,62 +80,6 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
     public $cssFileBottomLoadOnJs = false;
 
 
-    /**
-     * @var bool Включить стандартную быструю предзагрузку.
-     */
-    public $enabledPreloader    = false;
-
-    /**
-     * Особенно актуально в момент переноса css файлов вниз страницы
-     * @var bool Если включена предыдущая опция, этот html код будет вставлен в начало страницы
-     */
-    public $preloaderBodyHtml   = <<<HTML
-<div class="sx-preloader">
-    <div id="sx-loaderImage"></div>
-</div>
-HTML
-;
-    /**
-     * Особенно актуально в момент переноса css файлов вниз страницы
-     * @var bool Если включена предыдущая опция, этот css код будет вставлен в начало страницы
-     */
-    public $preloaderBodyCss    = <<<CSS
-.sx-preloader{
-  display: table;
-  background: #1e1e1e;
-  z-index: 999999;
-  position: fixed;
-  height: 100%;
-  width: 100%;
-  left: 0;
-  top: 0;
-}
-
-#sx-loaderImage {
-  display: table-cell;
-  vertical-align: middle;
-  overflow: hidden;
-  text-align: center;
-}
-
-
-#sx-canvas {
-  display: table-cell;
-  vertical-align: middle;
-  margin: 0 auto;
-}
-CSS
-;
-
-    public $preloaderBodyJs    = <<<JS
-	jQuery(window).load(function(){
-		jQuery('.sx-preloader').fadeOut('slow',function(){jQuery(this).remove();});
-	});
-JS
-;
-
-
-
 
 
     /**
@@ -165,6 +109,16 @@ JS
      */
     public function bootstrap($app)
     {
+
+
+        // otherwise had problems with ajax
+        if($this->enabled && \Yii::$app->request->isAjax){
+            \yii\base\Event::on(\yii\web\View::className(), \yii\web\View::EVENT_AFTER_RENDER, function ($e) {
+                unset($e->sender->assetBundles['yii\web\JqueryAsset']);
+            });
+        }
+
+        
         if ($app instanceof Application)
         {
             //Response::EVENT_AFTER_SEND,
@@ -176,7 +130,7 @@ JS
                  */
                 $view = $e->sender;
 
-                if ($this->enabled && $view instanceof View && \Yii::$app->response->format == Response::FORMAT_HTML && !\Yii::$app->request->isAjax)
+                if ($this->enabled && $view instanceof View && \Yii::$app->response->format == Response::FORMAT_HTML)
                 {
                     \Yii::beginProfile('Compress assets');
                     $this->_processing($view);
@@ -199,19 +153,6 @@ JS
      */
     protected function _processing(View $view)
     {
-        //Стандартный прелоадер
-        if ($this->enabledPreloader)
-        {
-            if ($this->preloaderBodyCss)
-            {
-                $view->registerCss($this->preloaderBodyCss);
-            }
-
-            if ($this->preloaderBodyJs)
-            {
-                $view->registerJs($this->preloaderBodyJs);
-            }
-        }
 
         //Компиляция файлов js в один.
         if ($view->jsFiles && $this->jsFileCompile)
@@ -320,23 +261,6 @@ JS
         }
 
 
-
-        //Стандартный прелоадер
-        if ($this->enabledPreloader && $this->preloaderBodyHtml)
-        {
-            \Yii::beginProfile('Adding preloader html');
-
-            if (ArrayHelper::getValue($view->jsFiles, View::POS_BEGIN))
-            {
-                $view->jsFiles[View::POS_BEGIN] = ArrayHelper::merge($view->jsFiles[View::POS_BEGIN], $this->preloaderBodyHtml);
-
-            } else
-            {
-                $view->jsFiles[View::POS_BEGIN][] = $this->preloaderBodyHtml;
-            }
-
-            \Yii::endProfile('Adding preloader html');
-        }
     }
 
     /**
