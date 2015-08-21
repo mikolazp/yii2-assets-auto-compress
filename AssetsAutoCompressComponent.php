@@ -295,7 +295,7 @@ JS
         $resultContent = [];
         $resultFiles = [];
         foreach ($files as $fileCode => $fileTag) {
-            if (Url::isRelative($fileCode) && $this->isIgnoreJs($fileCode)) {
+            if (Url::isRelative($fileCode) && !$this->isIgnoreJs($fileCode)) {
                 $resultContent[] = trim(file_get_contents(Url::to(\Yii::getAlias('@web' . $fileCode), true)));
             } else {
                 if ($this->jsFileRemouteCompile) {
